@@ -1,5 +1,7 @@
 package nn;
 
+import java.io.IOException;
+
 import org.apache.log4j.BasicConfigurator;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
 import org.deeplearning4j.eval.Evaluation;
@@ -12,13 +14,18 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.nd4j.jita.conf.CudaEnvironment;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.buffer.DataBuffer;
+import org.nd4j.linalg.api.buffer.util.DataTypeUtil;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
+import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 public class Firstnet {
     private static Logger log = LoggerFactory.getLogger(Firstnet.class);
@@ -28,11 +35,31 @@ public class Firstnet {
     	//logging
     	BasicConfigurator.configure();
     	
-        //number of rows and columns in the input pictures
+        // PLEASE NOTE: For CUDA FP16 precision support is available
+        DataTypeUtil.setDTypeForContext(DataBuffer.Type.HALF);
+
+        // temp workaround for backend initialization
+        Nd4j.create(1);
+
+        CudaEnvironment.getInstance().getConfiguration()
+            // key option enabled
+            .allowMultiGPU(true)
+
+            // we're allowing larger memory caches
+            .setMaximumDeviceCache(2L * 1024L * 1024L * 1024L)
+
+            // cross-device access is used for faster model averaging over pcie
+            .allowCrossDeviceAccess(true);   	
+    	
+        new Firstnet().buildAndRunNetwork();
+    }
+
+	private void buildAndRunNetwork() throws IOException {
+		//number of rows and columns in the input pictures
         final int numRows = 28;
         final int numColumns = 28;
         int outputNum = 10; // number of output classes
-        int batchSize = 64; // batch size for each epoch
+        int batchSize = 128; // batch size for each epoch
         int rngSeed = 123; // random number seed for reproducibility
         int numEpochs = 15; // number of epochs to perform
         double rate = 0.0015; // learning rate
@@ -71,6 +98,7 @@ public class Firstnet {
 
         MultiLayerNetwork model = new MultiLayerNetwork(conf);
         model.init();
+        
         model.setListeners(new ScoreIterationListener(5));  //print the score with every iteration
 
         log.info("Train model....");
@@ -90,6 +118,5 @@ public class Firstnet {
 
         log.info(eval.stats());
         log.info("****************Example finished********************");
-
-    }
+	}
 }
