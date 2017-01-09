@@ -1,6 +1,7 @@
 package nn;
 
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,14 +16,22 @@ public class MyDataVector {
 	
 	Logger log = LoggerFactory.getLogger(this.getClass());
 	
-	
-	public MyDataVector(int inputlength, int outputlength) {
+	public MyDataVector(float[] initialInput, float[] initialOutput) {
 		super();
+		init(initialInput.length, initialOutput.length, initialInput, initialOutput);
+	}
+	
+	public MyDataVector(int inputlength, int outputlength, float[] initialInput, float[] initialOutput) {
+		super();
+		init(inputlength, outputlength, initialInput, initialOutput);
+	}
+
+	private void init(int inputlength, int outputlength, float[] initialInput, float[] initialOutput) {
 		this.inputlength = inputlength;
 		this.outputlength = outputlength;
 		// create empty matrix with no columns
-		this.input = Nd4j.zeros(1,this.inputlength);
-		this.output = Nd4j.zeros(1,this.outputlength);
+		this.input = Nd4j.create(initialInput, new int[] {1,this.inputlength});
+		this.output = Nd4j.create(initialOutput, new int[] {1,this.outputlength});
 	}
 
 	public void addInputOutputPair(float[] input, float[] output) {
@@ -49,6 +58,10 @@ public class MyDataVector {
 
 	public int getOutputlength() {
 		return outputlength;
+	}
+	
+	public DataSet getDataSet() {
+		return new DataSet(this.input, this.output);
 	}
 	
 	

@@ -62,35 +62,27 @@ public class EntropyLearner {
 		
 		
 		//number of rows and columns in the input pictures
-        final int numRows = 2;
-        final int numColumns = 1;
+        final int numRows = 1;
+        final int numColumns = 2;
         int outputNum = 2; // number of output classes
         
-        int batchSize = 128; // batch size for each epoch
+        int batchSize = 4; // batch size for each epoch
         int rngSeed = 123; // random number seed for reproducibility
-        int numEpochs = 10; // number of epochs to perform
-        double rate = 0.0015; // learning rate
+        int numEpochs = 300; // number of epochs to perform
+        double rate = 0.1; // learning rate
 
         
         DataSet data = buildDataSet();
-        
-        log.debug(data.toString());
-        
-        //Get the DataSetIterators:
-        //DataSetIterator mnistTrain = new MnistDataSetIterator(batchSize, true, rngSeed);
-        //DataSetIterator mnistTest = new MnistDataSetIterator(batchSize, false, rngSeed);
-
+ 
 
         MultiLayerNetwork model = buildModel(numRows, numColumns, outputNum, rngSeed, rate);
         model.init();
         
         model.setListeners(new ScoreIterationListener(5));  //print the score with every iteration
 
-        log.info("Train model....");
-        for( int i=0; i<numEpochs; i++ ){
-        	log.info("Epoch " + i);
+
             model.fit(data);
-        }
+
         
         log.info("Evaluate model....");
         Evaluation eval = new Evaluation(outputNum); //create an evaluation object with 10 possible classes
@@ -104,8 +96,6 @@ public class EntropyLearner {
         log.info(eval.stats());
         log.info("****************Example finished********************");
         
-        log.debug(data.toString());
-        
 	}
 
 	private MultiLayerNetwork buildModel(final int numRows, final int numColumns, int outputNum, int rngSeed,
@@ -114,7 +104,7 @@ public class EntropyLearner {
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
             .seed(rngSeed) //include a random seed for reproducibility
             .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT) // use stochastic gradient descent as an optimization algorithm
-            .iterations(1)
+            .iterations(1000).miniBatch(false)
             .activation(Activation.RELU)
             .weightInit(WeightInit.XAVIER)
             .learningRate(rate) //specify the learning rate
@@ -122,74 +112,33 @@ public class EntropyLearner {
             .regularization(true).l2(rate * 0.005) // regularize learning model
             .list()
             .layer(0, new DenseLayer.Builder() //create the first input layer.
-                    .nIn(numRows * numColumns)
-                    .nOut(2)
-                    .build())
-            .layer(1, new OutputLayer.Builder(LossFunction.NEGATIVELOGLIKELIHOOD) //create hidden layer
-                    .activation(Activation.RELU)
                     .nIn(2)
+                    .nOut(4).activation(Activation.SIGMOID)
+                    .build())           
+            .layer(1, new OutputLayer.Builder(LossFunction.NEGATIVELOGLIKELIHOOD) //create hidden layer
+                    .activation(Activation.SOFTMAX)
+                    .nIn(4)
                     .nOut(outputNum)
                     .build())
             .pretrain(false).backprop(true) //use backpropagation to adjust weights
             .build();
 
         MultiLayerNetwork model = new MultiLayerNetwork(conf);
+        
 		return model;
 	}
 	
 	
 
-	private DataSet buildDataSet() {
-		// list off input values, 4 training samples with data for 2
-        // input-neurons each
-        INDArray input = Nd4j.zeros(4, 2);
-
-        // correspondending list with expected output values, 4 training samples
-        // with data for 2 output-neurons each
-        INDArray labels = Nd4j.zeros(4, 2);
-        
-        NDArrayFactory fac = Nd4j.factory();
-        
-        //INDArray input = array2x4(new float[][]{{1,0},{0,4}});
-        //INDArray labels = array2x4(new float[][]{{1,0},{0,4}});
-        
-        
-        //int [] myarray = ArrayUtil.flatten(new int[][] {{0,0},{0,1}});
-        //log.debug(fac.create(new int[]{0,0,0,0}, new int[] {2,2}).toString()); 
-        
-        
-//
-//        // create first dataset
-//        // when first input=0 and second input=0
-//        input.putScalar(new int[]{0, 0}, 0);
-//        input.putScalar(new int[]{0, 1}, 1);
-//        // then the first output fires for false, and the second is 0 (see class
-//        // comment)
-//        labels.putScalar(new int[]{0, 0}, 0);
-//        labels.putScalar(new int[]{0, 1}, 1);
-//
-//        // when first input=1 and second input=0
-//        input.putScalar(new int[]{1, 0}, 0);
-//        input.putScalar(new int[]{1, 1}, 1);
-//        // then xor is true, therefore the second output neuron fires
-//        labels.putScalar(new int[]{1, 0}, 0);
-//        labels.putScalar(new int[]{1, 1}, 1);
-//
-//        // same as above
-//        input.putScalar(new int[]{2, 0}, 0);
-//        input.putScalar(new int[]{2, 1}, 1);
-//        labels.putScalar(new int[]{2, 0}, 0);
-//        labels.putScalar(new int[]{2, 1}, 1);
-//
-//        // when both inputs fire, xor is false again - the first output should
-//        // fire
-//        input.putScalar(new int[]{3, 0}, 0);
-//        input.putScalar(new int[]{3, 1}, 1);
-//        labels.putScalar(new int[]{3, 0}, 0);
-//        labels.putScalar(new int[]{3, 1}, 1);
-//        
-        // create dataset object
-        return new DataSet(input, labels);
+	public DataSet buildDataSet() {
+		
+		MyDataVector myData = new MyDataVector(new float[]{0f , 0f}, new float[]{0f, 1f});
+		             myData.addInputOutputPair(new float[]{0f , 1f}, new float[]{1f, 0f});
+		             myData.addInputOutputPair(new float[]{1f , 0f}, new float[]{1f, 0f});
+		             myData.addInputOutputPair(new float[]{1f , 1f}, new float[]{0f, 1f});
+		return myData.getDataSet();
+		
+ 
 	}
 
 }
