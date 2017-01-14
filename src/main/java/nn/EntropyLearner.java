@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.log4j.BasicConfigurator;
-import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
+import org.deeplearning4j.api.storage.StatsStorage;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -15,28 +15,30 @@ import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.deeplearning4j.ui.api.UIServer;
+import org.deeplearning4j.ui.stats.StatsListener;
+import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.nd4j.jita.conf.CudaEnvironment;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.buffer.DataBuffer;
 import org.nd4j.linalg.api.buffer.util.DataTypeUtil;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
-import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
-import org.nd4j.linalg.factory.NDArrayFactory;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions.LossFunction;
-import org.nd4j.linalg.util.ArrayUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 public class EntropyLearner {
     private static Logger log = LoggerFactory.getLogger(EntropyLearner.class);
+    
+    private static UIServer uiServer;
 
     public static void main(String[] args) throws Exception {
     	
     	//logging
-    	BasicConfigurator.configure();
+    	//BasicConfigurator.configure();
     	
         // PLEASE NOTE: For CUDA FP16 precision support is available
         DataTypeUtil.setDTypeForContext(DataBuffer.Type.HALF);
@@ -54,6 +56,9 @@ public class EntropyLearner {
             // cross-device access is used for faster model averaging over pcie
             .allowCrossDeviceAccess(true);   	
     	
+        //Initialize the user interface backend
+       uiServer = UIServer.getInstance();
+        
         new EntropyLearner().run();
 
     }
@@ -76,24 +81,30 @@ public class EntropyLearner {
  
 
         MultiLayerNetwork model = buildModel(numRows, numColumns, outputNum, rngSeed, rate);
+        
         model.init();
         
-        model.setListeners(new ScoreIterationListener(5));  //print the score with every iteration
-
-
-            model.fit(data);
-
+        //model.setListeners(new ScoreIterationListener(5));  //print the score with every iteration
+        //Configure where the network information (gradients, activations, score vs. time etc) is to be stored
+        //Then add the StatsListener to collect this information from the network, as it trains
+        StatsStorage statsStorage = new InMemoryStatsStorage();             //Alternative: new FileStatsStorage(File) - see UIStorageExample
+        int listenerFrequency = 1;
+        model.setListeners(new StatsListener(statsStorage, listenerFrequency));
+        //Attach the StatsStorage instance to the UI: this allows the contents of the StatsStorage to be visualized
+        uiServer.attach(statsStorage);
         
-        log.info("Evaluate model....");
-        Evaluation eval = new Evaluation(outputNum); //create an evaluation object with 10 possible classes
-        Iterator<DataSet> dataIt = data.iterator();
-        while(dataIt.hasNext()){
-            DataSet next = dataIt.next();
-            INDArray output = model.output(next.getFeatureMatrix()); //get the networks prediction
-            eval.eval(next.getLabels(), output); //check the prediction against the true class
-        }
+        model.fit(data);
 
-        log.info(eval.stats());
+//        log.info("Evaluate model....");
+//        Evaluation eval = new Evaluation(outputNum); //create an evaluation object with 10 possible classes
+//        Iterator<DataSet> dataIt = data.iterator();
+//        while(dataIt.hasNext()){
+//            DataSet next = dataIt.next();
+//            INDArray output = model.output(next.getFeatureMatrix()); //get the networks prediction
+//            eval.eval(next.getLabels(), output); //check the prediction against the true class
+//        }
+
+//        log.info(eval.stats());
         log.info("****************Example finished********************");
         
 	}
@@ -104,7 +115,7 @@ public class EntropyLearner {
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
             .seed(rngSeed) //include a random seed for reproducibility
             .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT) // use stochastic gradient descent as an optimization algorithm
-            .iterations(1000).miniBatch(false)
+            .iterations(2000).miniBatch(false)
             .activation(Activation.RELU)
             .weightInit(WeightInit.XAVIER)
             .learningRate(rate) //specify the learning rate
@@ -139,6 +150,10 @@ public class EntropyLearner {
 		return myData.getDataSet();
 		
  
+	}
+	
+	public DataSet buildSetOfKnownEntropy() {
+		return null;
 	}
 
 }

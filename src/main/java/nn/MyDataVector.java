@@ -16,6 +16,9 @@ public class MyDataVector {
 	
 	Logger log = LoggerFactory.getLogger(this.getClass());
 	
+	public MyDataVector() {
+	}
+	
 	public MyDataVector(float[] initialInput, float[] initialOutput) {
 		super();
 		init(initialInput.length, initialOutput.length, initialInput, initialOutput);
@@ -26,6 +29,24 @@ public class MyDataVector {
 		init(inputlength, outputlength, initialInput, initialOutput);
 	}
 
+	@SuppressWarnings("unused")
+	public void init(INDArray initialInput, INDArray initialOutput) {
+		this.inputlength = initialInput.columns();
+		this.outputlength = initialOutput.columns();
+		// create empty matrix with no columns
+		this.input = initialInput;
+		this.output = initialOutput;
+	}	
+	
+	@SuppressWarnings("unused")
+	public void init(Vector initialInput, Vector initialOutput) {
+		this.inputlength = initialInput.length();
+		this.outputlength = initialOutput.length();
+		// create empty matrix with no columns
+		this.input = initialInput.getValues();
+		this.output = initialOutput.getValues();
+	}
+	
 	private void init(int inputlength, int outputlength, float[] initialInput, float[] initialOutput) {
 		this.inputlength = inputlength;
 		this.outputlength = outputlength;
@@ -44,6 +65,16 @@ public class MyDataVector {
 		
 	}
 
+	public void addInputOutputPair(Vector input, Vector output) {
+		
+		//INDArray inputVector = Nd4j.create(input, new int[]{1,this.inputlength}, 'c');
+		//INDArray outputVector = Nd4j.create(output, new int[]{1,this.outputlength}, 'c');
+		
+		this.input  = Nd4j.vstack(this.input, input.getValues());
+		this.output  = Nd4j.vstack(this.output, output.getValues());
+		
+	}	
+	
 	public INDArray getInput() {
 		return input;
 	}
