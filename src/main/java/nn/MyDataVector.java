@@ -47,7 +47,7 @@ public class MyDataVector {
 		this.output = initialOutput.getValues();
 	}
 	
-	private void init(int inputlength, int outputlength, float[] initialInput, float[] initialOutput) {
+	protected void init(int inputlength, int outputlength, float[] initialInput, float[] initialOutput) {
 		this.inputlength = inputlength;
 		this.outputlength = outputlength;
 		// create empty matrix with no columns
@@ -94,6 +94,5 @@ public class MyDataVector {
 	public DataSet getDataSet() {
 		return new DataSet(this.input, this.output);
 	}
-	
 	
 }
